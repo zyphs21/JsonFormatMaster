@@ -20,10 +20,39 @@ const JsonFormatter: React.FC = () => {
 
     try {
       const trimmed = jsonInput.trim();
-      // 检查是否是被双引号包裹的JSON字符串
-      const isDoubleQuoted = trimmed.startsWith('"') && trimmed.endsWith('"') && 
-                           JSON.parse(trimmed) !== undefined && 
-                           typeof JSON.parse(trimmed) === 'string';
+      // 检查是否是被双引号包裹的JSON字符串（包括有转义和无转义的情况）
+      const isDoubleQuoted = 
+        trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2 &&
+        (
+          // 标准的包含转义符的情况
+          ((() => {
+            try {
+              const parsed = JSON.parse(trimmed);
+              return typeof parsed === 'string' && (
+                parsed.startsWith('{') && parsed.endsWith('}') ||
+                parsed.startsWith('[') && parsed.endsWith(']')
+              );
+            } catch {
+              return false;
+            }
+          })()) ||
+          // 无转义符的情况
+          ((() => {
+            const content = trimmed.substring(1, trimmed.length - 1);
+            return (
+              (content.startsWith('{') && content.endsWith('}')) ||
+              (content.startsWith('[') && content.endsWith(']'))
+            ) && (() => {
+              try {
+                JSON.parse(content);
+                return true;
+              } catch {
+                return false;
+              }
+            })();
+          })())
+        );
+      
       setWasDoubleQuoted(isDoubleQuoted);
 
       // 先尝试解开双引号包装后检查是否是有效的JSON

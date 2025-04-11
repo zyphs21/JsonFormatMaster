@@ -23,16 +23,17 @@ export const parseJson = (jsonStr: string, processNestedJson: boolean = false): 
 /**
  * 处理被双引号包裹的JSON字符串
  * 例如: "{\"resp_json\":\"value\"}" -> {"resp_json":"value"}
+ * 或者: "{"resp_json":"value"}" -> {"resp_json":"value"}
  * @param jsonStr 可能被双引号包裹的JSON字符串
  * @returns 移除外层双引号后的JSON字符串
  */
 export const unwrapQuotedJsonString = (jsonStr: string): string => {
   const trimmed = jsonStr.trim();
   
-  // 检查是否被双引号包裹且内部是合法的JSON字符串结构
+  // 检查是否被双引号包裹
   if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
     try {
-      // 解析被引号包裹的内容（作为JavaScript字符串）
+      // 首先尝试标准的JSON解析
       const unquoted = JSON.parse(trimmed);
       
       // 检查解析后是否是字符串，并且该字符串看起来像是一个JSON
@@ -42,7 +43,19 @@ export const unwrapQuotedJsonString = (jsonStr: string): string => {
         return unquoted;
       }
     } catch {
-      // 如果解析失败，则使用原始字符串
+      // JSON.parse 失败，可能是因为内部没有转义，尝试手动截取
+      try {
+        // 去掉前后双引号，直接尝试看内容是否可以作为JSON解析
+        const content = trimmed.substring(1, trimmed.length - 1);
+        if ((content.startsWith('{') && content.endsWith('}')) || 
+            (content.startsWith('[') && content.endsWith(']'))) {
+          // 尝试直接解析内容
+          JSON.parse(content);
+          return content;
+        }
+      } catch {
+        // 仍然失败，使用原始字符串
+      }
     }
   }
   
@@ -103,12 +116,23 @@ export const isJsonString = (str: string): boolean => {
     // 检查是否是被双引号包裹的JSON字符串格式
     if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
       try {
+        // 标准方式尝试
         const unquoted = JSON.parse(trimmed);
         if (typeof unquoted === 'string') {
           return isJsonString(unquoted);
         }
       } catch {
-        // 解析失败，不是有效的JSON字符串
+        // 尝试直接截取内容检查
+        const content = trimmed.substring(1, trimmed.length - 1);
+        if ((content.startsWith('{') && content.endsWith('}')) || 
+            (content.startsWith('[') && content.endsWith(']'))) {
+          try {
+            JSON.parse(content);
+            return true;
+          } catch {
+            // 解析失败，不是有效的JSON字符串
+          }
+        }
       }
     }
     return false;
