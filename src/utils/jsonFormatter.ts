@@ -6,7 +6,9 @@
  */
 export const parseJson = (jsonStr: string, processNestedJson: boolean = false): unknown => {
   try {
-    const parsed = JSON.parse(jsonStr);
+    // 检查是否是被双引号包裹的JSON字符串
+    const unwrappedJson = unwrapQuotedJsonString(jsonStr);
+    const parsed = JSON.parse(unwrappedJson);
     
     if (processNestedJson) {
       return processNestedJsonValues(parsed);
@@ -16,6 +18,35 @@ export const parseJson = (jsonStr: string, processNestedJson: boolean = false): 
   } catch (error) {
     throw new Error(`JSON 解析错误: ${(error as Error).message}`);
   }
+};
+
+/**
+ * 处理被双引号包裹的JSON字符串
+ * 例如: "{\"resp_json\":\"value\"}" -> {"resp_json":"value"}
+ * @param jsonStr 可能被双引号包裹的JSON字符串
+ * @returns 移除外层双引号后的JSON字符串
+ */
+export const unwrapQuotedJsonString = (jsonStr: string): string => {
+  const trimmed = jsonStr.trim();
+  
+  // 检查是否被双引号包裹且内部是合法的JSON字符串结构
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
+    try {
+      // 解析被引号包裹的内容（作为JavaScript字符串）
+      const unquoted = JSON.parse(trimmed);
+      
+      // 检查解析后是否是字符串，并且该字符串看起来像是一个JSON
+      if (typeof unquoted === 'string' && 
+          ((unquoted.startsWith('{') && unquoted.endsWith('}')) || 
+           (unquoted.startsWith('[') && unquoted.endsWith(']')))) {
+        return unquoted;
+      }
+    } catch {
+      // 如果解析失败，则使用原始字符串
+    }
+  }
+  
+  return trimmed;
 };
 
 /**
@@ -62,17 +93,30 @@ const processNestedJsonValues = (obj: unknown): unknown => {
 export const isJsonString = (str: string): boolean => {
   if (typeof str !== 'string') return false;
   
-  // 检查字符串是否以 { 开头和 } 结尾，或 [ 开头和 ] 结尾
   const trimmed = str.trim();
+  
+  // 快速检查：字符串是否以 { 开头和 } 结尾，或 [ 开头和 ] 结尾
   if (
     !(trimmed.startsWith('{') && trimmed.endsWith('}')) &&
     !(trimmed.startsWith('[') && trimmed.endsWith(']'))
   ) {
+    // 检查是否是被双引号包裹的JSON字符串格式
+    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+      try {
+        const unquoted = JSON.parse(trimmed);
+        if (typeof unquoted === 'string') {
+          return isJsonString(unquoted);
+        }
+      } catch {
+        // 解析失败，不是有效的JSON字符串
+      }
+    }
     return false;
   }
   
+  // 尝试解析
   try {
-    JSON.parse(str);
+    JSON.parse(trimmed);
     return true;
   } catch {
     return false;

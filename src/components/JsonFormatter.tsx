@@ -1,5 +1,5 @@
-import React, { useState, useCallback, ReactNode } from 'react';
-import { parseJson, stringify } from '../utils/jsonFormatter';
+import React, { useState, useCallback } from 'react';
+import { parseJson, stringify, isJsonString, unwrapQuotedJsonString } from '../utils/jsonFormatter';
 import JsonViewer from './JsonViewer';
 import { FiCopy, FiTrash2 } from 'react-icons/fi';
 
@@ -9,6 +9,7 @@ const JsonFormatter: React.FC = () => {
   const [processNestedJson, setProcessNestedJson] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [wasDoubleQuoted, setWasDoubleQuoted] = useState<boolean>(false);
 
   const formatJson = useCallback(() => {
     if (!jsonInput.trim()) {
@@ -18,6 +19,21 @@ const JsonFormatter: React.FC = () => {
     }
 
     try {
+      const trimmed = jsonInput.trim();
+      // 检查是否是被双引号包裹的JSON字符串
+      const isDoubleQuoted = trimmed.startsWith('"') && trimmed.endsWith('"') && 
+                           JSON.parse(trimmed) !== undefined && 
+                           typeof JSON.parse(trimmed) === 'string';
+      setWasDoubleQuoted(isDoubleQuoted);
+
+      // 先尝试解开双引号包装后检查是否是有效的JSON
+      const unwrapped = unwrapQuotedJsonString(jsonInput);
+      if (!isJsonString(unwrapped)) {
+        setError('输入的不是有效的JSON字符串');
+        setFormattedJson(null);
+        return;
+      }
+
       const parsedJson = parseJson(jsonInput, processNestedJson);
       setFormattedJson(parsedJson);
       setError(null);
@@ -30,7 +46,13 @@ const JsonFormatter: React.FC = () => {
   const handleCopyToClipboard = useCallback(() => {
     if (formattedJson) {
       try {
-        const prettyJson = stringify(formattedJson);
+        let prettyJson = stringify(formattedJson);
+        
+        // 如果原始输入是被双引号包裹的，且用户希望保持这种格式，可以再次包裹
+        if (wasDoubleQuoted) {
+          prettyJson = JSON.stringify(prettyJson);
+        }
+        
         navigator.clipboard.writeText(prettyJson);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -38,12 +60,13 @@ const JsonFormatter: React.FC = () => {
         setError(`复制失败: ${(e as Error).message}`);
       }
     }
-  }, [formattedJson]);
+  }, [formattedJson, wasDoubleQuoted]);
 
   const handleClear = useCallback(() => {
     setJsonInput('');
     setFormattedJson(null);
     setError(null);
+    setWasDoubleQuoted(false);
   }, []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -55,16 +78,19 @@ const JsonFormatter: React.FC = () => {
     setProcessNestedJson(prev => !prev);
     if (jsonInput.trim()) {
       try {
-        const parsedJson = parseJson(jsonInput, !processNestedJson);
-        setFormattedJson(parsedJson);
-        setError(null);
+        const unwrapped = unwrapQuotedJsonString(jsonInput);
+        if (isJsonString(unwrapped)) {
+          const parsedJson = parseJson(jsonInput, !processNestedJson);
+          setFormattedJson(parsedJson);
+          setError(null);
+        }
       } catch {
         // 保持当前状态，不进行更新
       }
     }
   }, [jsonInput, processNestedJson]);
 
-  const renderResult = (): ReactNode => {
+  const renderResult = () => {
     if (error) {
       return <div className="text-red-500 p-2">{error}</div>;
     }
@@ -132,13 +158,20 @@ const JsonFormatter: React.FC = () => {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-medium">格式化结果</h2>
             {formattedJson && (
-              <button
-                onClick={handleCopyToClipboard}
-                className="flex items-center gap-1 text-blue-500 hover:text-blue-600"
-                title="复制到剪贴板"
-              >
-                <FiCopy /> {copied ? '已复制!' : '复制'}
-              </button>
+              <div className="flex items-center gap-2">
+                {wasDoubleQuoted && (
+                  <span className="text-xs text-gray-500">
+                    (检测到被引号包裹的JSON)
+                  </span>
+                )}
+                <button
+                  onClick={handleCopyToClipboard}
+                  className="flex items-center gap-1 text-blue-500 hover:text-blue-600"
+                  title="复制到剪贴板"
+                >
+                  <FiCopy /> {copied ? '已复制!' : '复制'}
+                </button>
+              </div>
             )}
           </div>
           
