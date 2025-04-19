@@ -2,3 +2,25 @@
 /* 这里可以放置全局样式或 Tailwind CSS 无法覆盖的自定义样式 */
 
 /* 移除默认样式 */
+
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 重置一些全局样式，确保布局一致性 */
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}

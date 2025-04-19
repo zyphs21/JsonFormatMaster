@@ -46,11 +46,13 @@ const styles = {
   },
   main: {
     flexGrow: 1,
-    padding: '2rem 1rem',
+    padding: '2rem 0',
   },
   content: {
-    maxWidth: '1200px',
+    width: '100%',
+    maxWidth: '100%',
     margin: '0 auto',
+    padding: '0 1rem',
   },
   toolbar: {
     marginBottom: '2rem',
@@ -133,8 +135,9 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '2rem'
+    gridTemplateColumns: '1fr 1fr',
+    gap: '2rem',
+    width: '100%'
   },
   card: {
     background: 'white',
@@ -242,23 +245,6 @@ const styles = {
   }
 };
 
-// 媒体查询函数
-const useMediaQuery = (query: string): boolean => {
-  const [matches, setMatches] = useState(window.matchMedia(query).matches);
-
-  React.useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    const listener = () => setMatches(media.matches);
-    media.addEventListener('change', listener);
-    return () => media.removeEventListener('change', listener);
-  }, [matches, query]);
-
-  return matches;
-};
-
 const JsonFormatter: React.FC = () => {
   const [jsonInput, setJsonInput] = useState<string>('');
   const [formattedJson, setFormattedJson] = useState<unknown>(null);
@@ -266,7 +252,6 @@ const JsonFormatter: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [wasDoubleQuoted, setWasDoubleQuoted] = useState<boolean>(false);
-  const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
   const formatJson = useCallback(() => {
     if (!jsonInput.trim()) {
@@ -382,7 +367,7 @@ const JsonFormatter: React.FC = () => {
     }
     
     if (formattedJson !== null) {
-      return <JsonViewer data={formattedJson} />;
+      return <JsonViewer data={formattedJson as Record<string, unknown> | unknown[]} />;
     }
     
     return <div style={styles.placeholder}>格式化的 JSON 将在这里显示</div>;
@@ -444,10 +429,7 @@ const JsonFormatter: React.FC = () => {
           </div>
 
           {/* 输入输出区域 */}
-          <div style={{
-            ...styles.grid,
-            gridTemplateColumns: isLargeScreen ? '1fr 1fr' : '1fr',
-          }}>
+          <div style={styles.grid}>
             {/* 输入区域 */}
             <div style={styles.card}>
               <div style={styles.cardHeader}>
@@ -479,7 +461,7 @@ const JsonFormatter: React.FC = () => {
                   )}
                 </h2>
                 
-                {formattedJson && (
+                {formattedJson !== null && (
                   <button
                     onClick={handleCopyToClipboard}
                     style={styles.copyButton}
