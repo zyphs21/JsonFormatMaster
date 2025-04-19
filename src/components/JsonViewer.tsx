@@ -1,5 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
+
+// 内联样式
+const styles = {
+  container: {
+    fontFamily: 'monospace',
+    fontSize: '0.875rem',
+  },
+  nodeLine: {
+    margin: '0.25rem 0',
+    cursor: 'pointer',
+  },
+  nonExpandable: {
+    cursor: 'default',
+  },
+  nodeWrapper: {
+    display: 'flex',
+    alignItems: 'flex-start',
+  },
+  expandIcon: {
+    marginRight: '0.25rem',
+    color: '#6b7280',
+    paddingTop: '0.125rem',
+  },
+  propertyName: {
+    color: '#3b82f6',
+    marginRight: '0.25rem',
+  },
+  indentation: {
+    marginLeft: '1rem',
+  },
+  valueString: {
+    color: '#10b981',
+  },
+  valueNumber: {
+    color: '#3b82f6',
+  },
+  valueBoolean: {
+    color: '#8b5cf6',
+  },
+  valueNull: {
+    color: '#6b7280',
+  },
+  preview: {
+    color: '#9ca3af',
+  },
+  comma: {
+    marginLeft: '0',
+  },
+  bracket: {
+    color: '#374151',
+  },
+};
 
 type JsonViewerProps = {
   data: unknown;
@@ -42,33 +94,33 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   const valueType = getValueType(value);
   const isExpandable = valueType === 'object' || valueType === 'array';
   
-  const renderValue = () => {
+  const renderValue = (): ReactNode => {
     switch (valueType) {
       case 'string':
-        return <span className="text-green-500">"{value as string}"</span>;
+        return <span style={styles.valueString}>"{value as string}"</span>;
       case 'number':
-        return <span className="text-blue-500">{value as number}</span>;
+        return <span style={styles.valueNumber}>{value as number}</span>;
       case 'boolean':
-        return <span className="text-purple-500">{String(value)}</span>;
+        return <span style={styles.valueBoolean}>{String(value)}</span>;
       case 'null':
-        return <span className="text-gray-500">null</span>;
+        return <span style={styles.valueNull}>null</span>;
       case 'object':
       case 'array':
         if (!expanded) {
           const preview = valueType === 'array' 
             ? `[${(value as unknown[]).length}项]` 
             : `{${Object.keys(value as Record<string, unknown>).length}键}`;
-          return <span className="text-gray-400">{preview}</span>;
+          return <span style={styles.preview}>{preview}</span>;
         }
         
         if (valueType === 'array') {
           if ((value as unknown[]).length === 0) {
-            return <span className="text-gray-400">[]</span>;
+            return <span style={styles.preview}>[]</span>;
           }
           
           return (
-            <div className="ml-4">
-              [
+            <div style={styles.indentation}>
+              <span style={styles.bracket}>[</span>
               <div>
                 {(value as unknown[]).map((item, index) => (
                   <JsonNode
@@ -81,18 +133,18 @@ const JsonNode: React.FC<JsonNodeProps> = ({
                   />
                 ))}
               </div>
-              ]
+              <span style={styles.bracket}>]</span>
             </div>
           );
         } else {
           const entries = Object.entries(value as Record<string, unknown>);
           if (entries.length === 0) {
-            return <span className="text-gray-400">{'{}'}</span>;
+            return <span style={styles.preview}>{'{}'}</span>;
           }
           
           return (
-            <div className="ml-4">
-              {'{'}
+            <div style={styles.indentation}>
+              <span style={styles.bracket}>{'{'}</span>
               <div>
                 {entries.map(([key, val], index) => (
                   <JsonNode
@@ -106,12 +158,12 @@ const JsonNode: React.FC<JsonNodeProps> = ({
                   />
                 ))}
               </div>
-              {'}'}
+              <span style={styles.bracket}>{'}'}</span>
             </div>
           );
         }
       default:
-        return <span className="text-gray-400">undefined</span>;
+        return <span style={styles.preview}>undefined</span>;
     }
   };
   
@@ -124,24 +176,27 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   
   return (
     <div 
-      className={`my-1 ${isExpandable ? 'cursor-pointer' : ''}`} 
+      style={{
+        ...styles.nodeLine,
+        ...(isExpandable ? {} : styles.nonExpandable)
+      }}
       onClick={handleClick}
     >
-      <div className="flex items-start">
+      <div style={styles.nodeWrapper}>
         {isExpandable && (
-          <span className="mr-1 text-gray-500 pt-0.5">
+          <span style={styles.expandIcon}>
             {expanded ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
           </span>
         )}
         
         <div>
           {name !== undefined && (
-            <span className="text-blue-400 mr-1">"{name}":</span>
+            <span style={styles.propertyName}>"{name}":</span>
           )}
           
           {renderValue()}
           
-          {!isLast && <span>,</span>}
+          {!isLast && <span style={styles.comma}>,</span>}
         </div>
       </div>
     </div>
@@ -156,7 +211,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
   const [expanded, setExpanded] = useState(initialExpanded);
   
   return (
-    <div className="font-mono text-sm">
+    <div style={styles.container}>
       <JsonNode
         value={data}
         isLast={true}
