@@ -10,7 +10,9 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     background: 'linear-gradient(to bottom right, #f0f9ff, #e0f2fe)',
-    color: '#333'
+    color: '#333',
+    overflow: 'auto',
+    width: '100%'
   },
   header: {
     background: 'white',
@@ -47,12 +49,14 @@ const styles = {
   main: {
     flexGrow: 1,
     padding: '2rem 0',
+    overflow: 'visible'
   },
   content: {
     width: '100%',
     maxWidth: '100%',
     margin: '0 auto',
     padding: '0 1rem',
+    boxSizing: 'border-box' as const
   },
   toolbar: {
     marginBottom: '2rem',
@@ -135,9 +139,10 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '2rem',
-    width: '100%'
+    gridTemplateColumns: '1fr',
+    gap: '1.5rem',
+    width: '100%',
+    overflow: 'visible'
   },
   card: {
     background: 'white',
@@ -145,7 +150,9 @@ const styles = {
     overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
     border: '1px solid #e5edff',
-    transition: 'all 0.3s'
+    transition: 'all 0.3s',
+    width: '100%',
+    boxSizing: 'border-box' as const
   },
   cardHeader: {
     padding: '1rem',
@@ -192,7 +199,7 @@ const styles = {
   },
   textarea: {
     width: '100%',
-    height: '400px',
+    height: '300px',
     padding: '1rem',
     border: '1px solid #e5edff',
     borderRadius: '0.375rem',
@@ -202,9 +209,10 @@ const styles = {
     outline: 'none'
   },
   resultContainer: {
-    height: '400px',
+    height: '300px',
     overflow: 'auto',
-    padding: '1rem'
+    padding: '1rem',
+    boxSizing: 'border-box' as const
   },
   errorMessage: {
     color: '#ef4444',

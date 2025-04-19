@@ -3,7 +3,15 @@ import './App.css'
 
 function App() {
   return (
-    <div className="app-container" style={{ width: '100%', maxWidth: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="app-container" style={{ 
+      width: '100%', 
+      maxWidth: '100vw', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      overflow: 'auto',
+      height: 'auto',
+      minHeight: '100vh'
+    }}>
       <JsonFormatter />
     </div>
   )
