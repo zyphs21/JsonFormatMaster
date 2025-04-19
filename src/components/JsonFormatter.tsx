@@ -147,7 +147,7 @@ const styles = {
   card: {
     background: 'white',
     borderRadius: '0.5rem',
-    overflow: 'hidden',
+    overflow: 'visible',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
     border: '1px solid #e5edff',
     transition: 'all 0.3s',
@@ -209,8 +209,10 @@ const styles = {
     outline: 'none'
   },
   resultContainer: {
-    height: '300px',
-    overflow: 'auto',
+    minHeight: '300px',
+    height: 'auto',
+    maxHeight: 'none',
+    overflow: 'visible',
     padding: '1rem',
     boxSizing: 'border-box' as const
   },
