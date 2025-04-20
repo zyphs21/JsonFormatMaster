@@ -401,43 +401,6 @@ const JsonFormatter: React.FC = () => {
       {/* 主内容区 */}
       <main style={styles.main}>
         <div style={styles.content}>
-          {/* 工具栏 */}
-          <div style={styles.toolbar}>
-            <div style={styles.toolbarFlex}>
-              <div style={styles.checkboxContainer}>
-                <input
-                  type="checkbox"
-                  id="processNestedJson"
-                  checked={processNestedJson}
-                  onChange={handleToggleNestedJson}
-                  style={styles.checkbox}
-                />
-                <label htmlFor="processNestedJson" style={styles.checkboxLabel}>
-                  解析嵌套 JSON 字符串
-                </label>
-                <div style={styles.badge}>
-                  新功能
-                </div>
-              </div>
-              
-              <div style={styles.buttonContainer}>
-                <button
-                  onClick={handleClear}
-                  style={styles.clearButton}
-                >
-                  <FiTrash2 style={styles.clearButtonIcon} /> 清空
-                </button>
-                
-                <button
-                  onClick={formatJson}
-                  style={styles.formatButton}
-                >
-                  格式化 JSON
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* 输入输出区域 */}
           <div style={styles.grid}>
             {/* 输入区域 */}
@@ -456,6 +419,94 @@ const JsonFormatter: React.FC = () => {
                   style={styles.textarea}
                   placeholder='{"example": "在此处粘贴你的 JSON"}'
                 />
+              </div>
+            </div>
+
+            {/* 操作区域 */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              {/* 操作按钮和选项 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem',
+                background: 'linear-gradient(to right, #f3f4f6, #f9fafb)',
+                borderRadius: '0.5rem',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                  <input
+                    type="checkbox"
+                    id="processNestedJson"
+                    checked={processNestedJson}
+                    onChange={handleToggleNestedJson}
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
+                      marginRight: '0.75rem',
+                      accentColor: '#3b82f6'
+                    }}
+                  />
+                  <label htmlFor="processNestedJson" style={{
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#1e40af'
+                  }}>
+                    解析嵌套 JSON 字符串
+                  </label>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '1rem'
+                }}>
+                  <button
+                    onClick={handleClear}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0.5rem 1.25rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      background: 'white',
+                      color: '#374151',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <FiTrash2 style={{ color: '#ef4444', marginRight: '0.5rem' }} /> 清空
+                  </button>
+                  
+                  <button
+                    onClick={formatJson}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0.625rem 1.25rem',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                      color: 'white',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    格式化 JSON
+                  </button>
+                </div>
               </div>
             </div>
 
