@@ -6,6 +6,9 @@ const styles = {
   container: {
     fontFamily: 'monospace',
     fontSize: '0.875rem',
+    width: '100%',
+    overflow: 'visible',
+    display: 'inline-block'
   },
   nodeLine: {
     margin: '0.25rem 0',

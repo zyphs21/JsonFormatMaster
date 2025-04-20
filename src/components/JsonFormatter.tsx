@@ -56,7 +56,8 @@ const styles = {
     maxWidth: '100%',
     margin: '0 auto',
     padding: '0 1rem',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    overflow: 'hidden'
   },
   toolbar: {
     marginBottom: '2rem',
@@ -142,12 +143,12 @@ const styles = {
     gridTemplateColumns: '1fr',
     gap: '1.5rem',
     width: '100%',
-    overflow: 'visible'
+    overflow: 'hidden'
   },
   card: {
     background: 'white',
     borderRadius: '0.5rem',
-    overflow: 'visible',
+    overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
     border: '1px solid #e5edff',
     transition: 'all 0.3s',
@@ -212,9 +213,10 @@ const styles = {
     minHeight: '300px',
     height: 'auto',
     maxHeight: 'none',
-    overflow: 'visible',
+    overflow: 'auto',
     padding: '1rem',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    whiteSpace: 'nowrap'
   },
   errorMessage: {
     color: '#ef4444',
