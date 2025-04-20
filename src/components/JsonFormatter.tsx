@@ -196,7 +196,8 @@ const styles = {
     marginRight: '0.25rem'
   },
   cardBody: {
-    padding: '1rem'
+    padding: '1rem',
+    boxSizing: 'border-box' as const
   },
   textarea: {
     width: '100%',
@@ -207,7 +208,8 @@ const styles = {
     fontSize: '0.875rem',
     fontFamily: 'monospace',
     resize: 'none' as const,
-    outline: 'none'
+    outline: 'none',
+    boxSizing: 'border-box' as const
   },
   resultContainer: {
     minHeight: '300px',
