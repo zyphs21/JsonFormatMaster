@@ -246,12 +246,40 @@ const JsonNode: React.FC<JsonNodeProps> = ({
           const preview = valueType === 'array' 
             ? `[${(value as unknown[]).length}项]` 
             : `{${Object.keys(value as Record<string, unknown>).length}键}`;
-          return <span style={styles.preview}>{preview}</span>;
+          return (
+            <span 
+              style={{
+                ...styles.preview,
+                cursor: 'pointer'
+              }} 
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand();
+              }}
+              title="点击展开"
+            >
+              {preview}
+            </span>
+          );
         }
         
         if (valueType === 'array') {
           if ((value as unknown[]).length === 0) {
-            return <span style={styles.preview}>[]</span>;
+            return (
+              <span 
+                style={{
+                  ...styles.preview,
+                  cursor: 'pointer'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand();
+                }}
+                title="空数组"
+              >
+                []
+              </span>
+            );
           }
           
           return (
@@ -275,7 +303,21 @@ const JsonNode: React.FC<JsonNodeProps> = ({
         } else {
           const entries = Object.entries(value as Record<string, unknown>);
           if (entries.length === 0) {
-            return <span style={styles.preview}>{'{}'}</span>;
+            return (
+              <span 
+                style={{
+                  ...styles.preview,
+                  cursor: 'pointer'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand();
+                }}
+                title="空对象"
+              >
+                {}
+              </span>
+            );
           }
           
           return (
