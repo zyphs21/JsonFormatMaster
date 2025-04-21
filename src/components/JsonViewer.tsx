@@ -403,8 +403,26 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(initialExpanded);
   
+  // 添加全局样式来自定义选中文本的样式
+  React.useEffect(() => {
+    // 创建样式元素
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+      .json-formatter-content ::selection {
+        background-color: rgba(0, 0, 0, 0.7) !important;
+        color: white !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+
+    // 组件卸载时移除样式
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+  
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="json-formatter-content">
       <JsonNode
         value={data}
         isLast={true}
