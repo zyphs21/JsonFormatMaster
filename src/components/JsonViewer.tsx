@@ -12,7 +12,6 @@ const styles = {
   },
   nodeLine: {
     margin: '0.25rem 0',
-    cursor: 'pointer',
   },
   nonExpandable: {
     cursor: 'default',
@@ -25,25 +24,35 @@ const styles = {
     marginRight: '0.25rem',
     color: '#6b7280',
     paddingTop: '0.125rem',
+    cursor: 'pointer',
   },
   propertyName: {
     color: '#3b82f6',
     marginRight: '0.25rem',
+    userSelect: 'text' as const,
   },
   indentation: {
     marginLeft: '1rem',
   },
   valueString: {
     color: '#10b981',
+    cursor: 'pointer',
+    userSelect: 'text' as const,
   },
   valueNumber: {
     color: '#3b82f6',
+    cursor: 'pointer',
+    userSelect: 'text' as const,
   },
   valueBoolean: {
     color: '#8b5cf6',
+    cursor: 'pointer',
+    userSelect: 'text' as const,
   },
   valueNull: {
     color: '#6b7280',
+    cursor: 'pointer',
+    userSelect: 'text' as const,
   },
   preview: {
     color: '#9ca3af',
@@ -54,6 +63,22 @@ const styles = {
   bracket: {
     color: '#374151',
   },
+  tooltip: {
+    position: 'absolute' as const,
+    background: 'rgba(0,0,0,0.7)',
+    color: 'white',
+    padding: '0.25rem 0.5rem',
+    borderRadius: '0.25rem',
+    fontSize: '0.75rem',
+    marginTop: '-1.5rem',
+    marginLeft: '1rem',
+    opacity: 0,
+    transition: 'opacity 0.2s',
+    pointerEvents: 'none' as const,
+  },
+  tooltipVisible: {
+    opacity: 1,
+  }
 };
 
 type JsonViewerProps = {
@@ -80,6 +105,7 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   toggleExpand,
 }) => {
   const [childExpanded, setChildExpanded] = useState<Record<string, boolean>>({});
+  const [showTooltip, setShowTooltip] = useState(false);
   
   const toggleChild = (key: string) => {
     setChildExpanded(prev => ({
@@ -97,16 +123,77 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   const valueType = getValueType(value);
   const isExpandable = valueType === 'object' || valueType === 'array';
   
+  const handleCopyValue = (val: unknown) => {
+    let textToCopy = '';
+    
+    if (valueType === 'string') {
+      textToCopy = val as string;
+    } else if (valueType === 'number' || valueType === 'boolean' || valueType === 'null') {
+      textToCopy = String(val);
+    }
+    
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        setShowTooltip(true);
+        setTimeout(() => setShowTooltip(false), 1000);
+      });
+    }
+  };
+  
   const renderValue = (): ReactNode => {
     switch (valueType) {
       case 'string':
-        return <span style={styles.valueString}>"{value as string}"</span>;
+        return (
+          <span 
+            style={styles.valueString} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyValue(value);
+            }}
+            title="点击复制"
+          >
+            "{value as string}"
+          </span>
+        );
       case 'number':
-        return <span style={styles.valueNumber}>{value as number}</span>;
+        return (
+          <span 
+            style={styles.valueNumber} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyValue(value);
+            }}
+            title="点击复制"
+          >
+            {value as number}
+          </span>
+        );
       case 'boolean':
-        return <span style={styles.valueBoolean}>{String(value)}</span>;
+        return (
+          <span 
+            style={styles.valueBoolean} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyValue(value);
+            }}
+            title="点击复制"
+          >
+            {String(value)}
+          </span>
+        );
       case 'null':
-        return <span style={styles.valueNull}>null</span>;
+        return (
+          <span 
+            style={styles.valueNull} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyValue(null);
+            }}
+            title="点击复制"
+          >
+            null
+          </span>
+        );
       case 'object':
       case 'array':
         if (!expanded) {
@@ -170,26 +257,21 @@ const JsonNode: React.FC<JsonNodeProps> = ({
     }
   };
   
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isExpandable) {
-      toggleExpand();
-    }
-  };
-  
   return (
-    <div 
-      style={{
-        ...styles.nodeLine,
-        ...(isExpandable ? {} : styles.nonExpandable)
-      }}
-      onClick={handleClick}
-    >
+    <div style={styles.nodeLine}>
       <div style={styles.nodeWrapper}>
-        {isExpandable && (
-          <span style={styles.expandIcon}>
+        {isExpandable ? (
+          <span 
+            style={styles.expandIcon} 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpand();
+            }}
+          >
             {expanded ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
           </span>
+        ) : (
+          <span style={{ width: '10px', marginRight: '0.25rem' }}></span>
         )}
         
         <div>
@@ -200,6 +282,15 @@ const JsonNode: React.FC<JsonNodeProps> = ({
           {renderValue()}
           
           {!isLast && <span style={styles.comma}>,</span>}
+          
+          {showTooltip && (
+            <span style={{
+              ...styles.tooltip,
+              ...(showTooltip ? styles.tooltipVisible : {})
+            }}>
+              已复制到剪贴板
+            </span>
+          )}
         </div>
       </div>
     </div>
