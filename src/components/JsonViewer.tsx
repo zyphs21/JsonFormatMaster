@@ -64,21 +64,9 @@ const styles = {
   bracket: {
     color: '#374151',
   },
-  tooltip: {
-    position: 'absolute' as const,
-    background: 'rgba(0,0,0,0.7)',
-    color: 'white',
-    padding: '0.25rem 0.5rem',
-    borderRadius: '0.25rem',
-    fontSize: '0.75rem',
-    marginTop: '-1.5rem',
-    marginLeft: '1rem',
-    opacity: 0,
-    transition: 'opacity 0.2s',
-    pointerEvents: 'none' as const,
-  },
-  tooltipVisible: {
-    opacity: 1,
+  valueContainer: {
+    position: 'relative' as const,
+    display: 'inline-block',
   }
 };
 
@@ -106,7 +94,6 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   toggleExpand,
 }) => {
   const [childExpanded, setChildExpanded] = useState<Record<string, boolean>>({});
-  const [showTooltip, setShowTooltip] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   
   // 监听mouseup事件，判断是否在选择文本
@@ -143,20 +130,51 @@ const JsonNode: React.FC<JsonNodeProps> = ({
   const valueType = getValueType(value);
   const isExpandable = valueType === 'object' || valueType === 'array';
   
-  const handleCopyValue = (val: unknown) => {
+  const handleCopyValue = (val: unknown, e: React.MouseEvent) => {
     let textToCopy = '';
     
     if (valueType === 'string') {
       textToCopy = val as string;
-    } else if (valueType === 'number' || valueType === 'boolean' || valueType === 'null') {
+    } else if (valueType === 'number' || valueType === 'boolean') {
       textToCopy = String(val);
+    } else if (valueType === 'null') {
+      textToCopy = 'null';
     }
     
-    if (textToCopy) {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        setShowTooltip(true);
-        setTimeout(() => setShowTooltip(false), 1000);
-      });
+    if (textToCopy || textToCopy === '') {
+      try {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => {
+            // 创建一个全局Toast元素
+            const toastDiv = document.createElement('div');
+            Object.assign(toastDiv.style, {
+              position: 'fixed',
+              left: `${e.clientX}px`,
+              top: `${e.clientY - 40}px`,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              fontSize: '14px',
+              zIndex: '9999',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none'
+            });
+            toastDiv.textContent = '已复制到剪贴板';
+            document.body.appendChild(toastDiv);
+            
+            // 显示一段时间后移除
+            setTimeout(() => {
+              document.body.removeChild(toastDiv);
+            }, 1500);
+          })
+          .catch(err => {
+            console.error('复制失败:', err);
+          });
+      } catch (e) {
+        console.error('复制出错:', e);
+      }
     }
   };
   
@@ -164,54 +182,62 @@ const JsonNode: React.FC<JsonNodeProps> = ({
     switch (valueType) {
       case 'string':
         return (
-          <span 
-            style={styles.valueString} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyValue(value);
-            }}
-            title="点击复制"
-          >
-            "{value as string}"
+          <span style={styles.valueContainer}>
+            <span 
+              style={styles.valueString} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyValue(value, e);
+              }}
+              title="点击复制"
+            >
+              "{value as string}"
+            </span>
           </span>
         );
       case 'number':
         return (
-          <span 
-            style={styles.valueNumber} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyValue(value);
-            }}
-            title="点击复制"
-          >
-            {value as number}
+          <span style={styles.valueContainer}>
+            <span 
+              style={styles.valueNumber} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyValue(value, e);
+              }}
+              title="点击复制"
+            >
+              {value as number}
+            </span>
           </span>
         );
       case 'boolean':
         return (
-          <span 
-            style={styles.valueBoolean} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyValue(value);
-            }}
-            title="点击复制"
-          >
-            {String(value)}
+          <span style={styles.valueContainer}>
+            <span 
+              style={styles.valueBoolean} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyValue(value, e);
+              }}
+              title="点击复制"
+            >
+              {String(value)}
+            </span>
           </span>
         );
       case 'null':
         return (
-          <span 
-            style={styles.valueNull} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopyValue(null);
-            }}
-            title="点击复制"
-          >
-            null
+          <span style={styles.valueContainer}>
+            <span 
+              style={styles.valueNull} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyValue(null, e);
+              }}
+              title="点击复制"
+            >
+              null
+            </span>
           </span>
         );
       case 'object':
@@ -322,15 +348,6 @@ const JsonNode: React.FC<JsonNodeProps> = ({
           {renderValue()}
           
           {!isLast && <span style={styles.comma}>,</span>}
-          
-          {showTooltip && (
-            <span style={{
-              ...styles.tooltip,
-              ...(showTooltip ? styles.tooltipVisible : {})
-            }}>
-              已复制到剪贴板
-            </span>
-          )}
         </div>
       </div>
     </div>
