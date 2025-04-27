@@ -9,8 +9,8 @@ export const parseJson = (jsonStr: string, processNestedJson: boolean = false): 
     // 检查是否是被双引号包裹的JSON字符串
     const unwrappedJson = unwrapQuotedJsonString(jsonStr);
     
-    // 在解析之前，将大数字转换为字符串
-    const processedJson = unwrappedJson.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"$1"');
+    // 在解析之前，将大数字转换为带标记的字符串
+    const processedJson = unwrappedJson.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"[BigInt]$1"');
     
     const parsed = JSON.parse(processedJson);
     
@@ -88,8 +88,8 @@ const processNestedJsonValues = (obj: unknown): unknown => {
     // 检查是否为 JSON 字符串
     if (typeof value === 'string' && isJsonString(value)) {
       try {
-        // 在解析之前，将大数字转换为字符串
-        const processedValue = value.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"$1"');
+        // 在解析之前，将大数字转换为带标记的字符串
+        const processedValue = value.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"[BigInt]$1"');
         const parsedValue = JSON.parse(processedValue);
         result[key] = processNestedJsonValues(parsedValue);
       } catch {
