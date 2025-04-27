@@ -8,7 +8,11 @@ export const parseJson = (jsonStr: string, processNestedJson: boolean = false): 
   try {
     // 检查是否是被双引号包裹的JSON字符串
     const unwrappedJson = unwrapQuotedJsonString(jsonStr);
-    const parsed = JSON.parse(unwrappedJson);
+    
+    // 在解析之前，将大数字转换为字符串
+    const processedJson = unwrappedJson.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"$1"');
+    
+    const parsed = JSON.parse(processedJson);
     
     if (processNestedJson) {
       return processNestedJsonValues(parsed);
@@ -84,7 +88,10 @@ const processNestedJsonValues = (obj: unknown): unknown => {
     // 检查是否为 JSON 字符串
     if (typeof value === 'string' && isJsonString(value)) {
       try {
-        result[key] = processNestedJsonValues(JSON.parse(value));
+        // 在解析之前，将大数字转换为字符串
+        const processedValue = value.replace(/(?<!\\)":\s*(\d{16,})(?=\s*[,}])/g, '":"$1"');
+        const parsedValue = JSON.parse(processedValue);
+        result[key] = processNestedJsonValues(parsedValue);
       } catch {
         result[key] = value;
       }
