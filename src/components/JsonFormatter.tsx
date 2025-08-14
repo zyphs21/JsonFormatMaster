@@ -262,7 +262,8 @@ const styles = {
 const JsonFormatter: React.FC = () => {
   const [jsonInput, setJsonInput] = useState<string>('');
   const [formattedJson, setFormattedJson] = useState<unknown>(null);
-  const [processNestedJson, setProcessNestedJson] = useState<boolean>(false);
+  const [processNestedJson, setProcessNestedJson] = useState<boolean>(true);
+
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [wasDoubleQuoted, setWasDoubleQuoted] = useState<boolean>(false);
@@ -331,21 +332,17 @@ const JsonFormatter: React.FC = () => {
   const handleCopyToClipboard = useCallback(() => {
     if (formattedJson) {
       try {
-        let prettyJson = stringify(formattedJson);
+        // 默认复制格式化的JSON（带换行符和缩进）
+        const jsonString = stringify(formattedJson);
         
-        // 如果原始输入是被双引号包裹的，且用户希望保持这种格式，可以再次包裹
-        if (wasDoubleQuoted) {
-          prettyJson = JSON.stringify(prettyJson);
-        }
-        
-        navigator.clipboard.writeText(prettyJson);
+        navigator.clipboard.writeText(jsonString);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (e) {
         setError(`复制失败: ${(e as Error).message}`);
       }
     }
-  }, [formattedJson, wasDoubleQuoted]);
+  }, [formattedJson]);
 
   const handleClear = useCallback(() => {
     setJsonInput('');
