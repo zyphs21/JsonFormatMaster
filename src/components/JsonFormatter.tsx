@@ -703,7 +703,7 @@ const JsonFormatter: React.FC = () => {
                   }}
                   title="搜索"
                 >搜索</button>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: '#374151' }}>
                   <input 
                     type="checkbox" 
                     checked={pathSearchMode} 
@@ -712,7 +712,7 @@ const JsonFormatter: React.FC = () => {
                   />
                   按键路径搜索
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: '#374151' }}>
                   <input 
                     type="checkbox" 
                     checked={filterOnlyMatches} 
@@ -721,7 +721,7 @@ const JsonFormatter: React.FC = () => {
                   />
                   只显示匹配节点
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: '#374151' }}>
                   <input 
                     type="checkbox" 
                     checked={caseSensitive} 
@@ -730,7 +730,7 @@ const JsonFormatter: React.FC = () => {
                   />
                   区分大小写
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: '#374151' }}>
                   <input 
                     type="checkbox" 
                     checked={autoExpand} 
@@ -747,7 +747,8 @@ const JsonFormatter: React.FC = () => {
                     border: '1px solid #e5edff',
                     borderRadius: '0.375rem',
                     fontSize: '0.85rem',
-                    background: 'white'
+                    background: 'white',
+                    color: '#374151'
                   }}
                   title="匹配方式"
                 >
@@ -762,6 +763,7 @@ const JsonFormatter: React.FC = () => {
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
                     background: 'white',
+                    color: '#374151',
                     fontSize: '0.85rem',
                     cursor: 'pointer'
                   }}
@@ -774,6 +776,7 @@ const JsonFormatter: React.FC = () => {
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
                     background: 'white',
+                    color: '#374151',
                     fontSize: '0.85rem',
                     cursor: 'pointer'
                   }}
@@ -823,6 +826,7 @@ const JsonFormatter: React.FC = () => {
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
                   background: 'white',
+                  color: '#374151',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
                 }}
@@ -835,6 +839,7 @@ const JsonFormatter: React.FC = () => {
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
                   background: 'white',
+                  color: '#374151',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
                 }}
@@ -847,6 +852,7 @@ const JsonFormatter: React.FC = () => {
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
                   background: 'white',
+                  color: '#374151',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
                 }}
@@ -859,6 +865,7 @@ const JsonFormatter: React.FC = () => {
                   borderRadius: '0.375rem',
                   border: '1px solid #d1d5db',
                   background: 'white',
+                  color: '#374151',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
                 }}

@@ -55,6 +55,7 @@ button {
   font-weight: 500;
   font-family: inherit;
   background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.87);
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -64,6 +65,14 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+select {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+label {
+  color: rgba(255, 255, 255, 0.87);
 }
 
 @media (prefers-color-scheme: light) {
@@ -76,5 +85,12 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+    color: #213547;
+  }
+  select {
+    color: #213547;
+  }
+  label {
+    color: #213547;
   }
 }
