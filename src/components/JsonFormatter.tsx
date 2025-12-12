@@ -1,4 +1,4 @@
-import React, { useState, useCallback, ReactNode } from 'react';
+import React, { useState, useCallback, ReactNode, useRef } from 'react';
 import { parseJson, stringify, isJsonString, unwrapQuotedJsonString } from '../utils/jsonFormatter';
 import JsonViewer from './JsonViewer';
 import { FiCopy, FiTrash2, FiCode } from 'react-icons/fi';
@@ -267,6 +267,17 @@ const JsonFormatter: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [wasDoubleQuoted, setWasDoubleQuoted] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [pathSearchMode, setPathSearchMode] = useState<boolean>(false);
+  const [globalExpandSignal, setGlobalExpandSignal] = useState<{ mode: 'none' | 'expand_all' | 'collapse_all'; tick: number }>({ mode: 'none', tick: 0 });
+  const [filterOnlyMatches, setFilterOnlyMatches] = useState<boolean>(false);
+  const [matchStrategy, setMatchStrategy] = useState<'contains' | 'exact' | 'regex'>('contains');
+  const [caseSensitive, setCaseSensitive] = useState<boolean>(false);
+  const [autoExpand, setAutoExpand] = useState<boolean>(true);
+  const [matchedPaths, setMatchedPaths] = useState<string[]>([]);
+  const [matchesVersion, setMatchesVersion] = useState<number>(0);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
 
   const formatJson = useCallback(() => {
     if (!jsonInput.trim()) {
@@ -349,12 +360,91 @@ const JsonFormatter: React.FC = () => {
     setFormattedJson(null);
     setError(null);
     setWasDoubleQuoted(false);
+    setSearchQuery('');
+    setMatchedPaths([]);
+    setActiveIndex(0);
   }, []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setJsonInput(e.target.value);
     setError(null);
   }, []);
+
+  const computeMatches = useCallback((data: unknown, query: string): string[] => {
+    if (!data || !query.trim()) return [];
+    const raw = query.trim();
+    const norm = caseSensitive ? raw : raw.toLowerCase();
+    const rawForRegex = raw.replace(/\[\]/g, '\\[\\d+\\]');
+    const regex = matchStrategy === 'regex' ? (() => {
+      try { return new RegExp(rawForRegex, caseSensitive ? undefined : 'i'); } catch { return null; }
+    })() : null;
+    const matchText = (text: string) => {
+      if (!raw) return false;
+      if (matchStrategy === 'regex') return regex ? regex.test(text) : false;
+      const t = caseSensitive ? text : text.toLowerCase();
+      if (matchStrategy === 'exact') return t === norm;
+      return t.includes(norm);
+    };
+    const matchPath = (p: string) => {
+      const text = p || '';
+      if (!raw) return false;
+      if (matchStrategy === 'regex') return regex ? regex.test(text) : false;
+      const tNoIdx = text.replace(/\[\d+\]/g, '');
+      const qNoIdx = raw.replace(/\[\d+\]/g, '').replace(/\[\]/g, '');
+      const t = caseSensitive ? tNoIdx : tNoIdx.toLowerCase();
+      const q = caseSensitive ? qNoIdx : qNoIdx.toLowerCase();
+      if (matchStrategy === 'exact') return t === q;
+      return t.includes(q);
+    };
+
+    const paths: string[] = [];
+    const getType = (v: unknown): string => {
+      if (v === null) return 'null';
+      if (Array.isArray(v)) return 'array';
+      return typeof v;
+    };
+    const walk = (v: unknown, p: string) => {
+      const t = getType(v);
+      if (pathSearchMode) {
+        if (matchPath(p)) paths.push(p);
+      } else {
+        if (t === 'string' || t === 'number' || t === 'boolean' || t === 'null') {
+          if (matchText(String(v))) paths.push(p);
+        }
+      }
+      if (t === 'array') {
+        const arr = v as unknown[];
+        for (let i = 0; i < arr.length; i++) {
+          walk(arr[i], `${p}[${i}]`);
+        }
+      } else if (t === 'object') {
+        const obj = v as Record<string, unknown>;
+        for (const k of Object.keys(obj)) {
+          const childPath = p ? `${p}.${k}` : k;
+          if (!pathSearchMode) {
+            if (matchText(k)) paths.push(childPath);
+          }
+          walk(obj[k], childPath);
+        }
+      }
+    };
+    walk(data, '$');
+    return paths;
+  }, [matchStrategy, caseSensitive, pathSearchMode]);
+
+  const triggerSearch = useCallback(() => {
+    const q = searchInput.trim();
+    setSearchQuery(q);
+    setMatchesVersion(v => v + 1);
+    if (formattedJson !== null) {
+      const matches = computeMatches(formattedJson, q);
+      setMatchedPaths(matches);
+      setActiveIndex(0);
+    } else {
+      setMatchedPaths([]);
+      setActiveIndex(0);
+    }
+  }, [searchInput, formattedJson, computeMatches]);
 
   const handleToggleNestedJson = useCallback(() => {
     setProcessNestedJson(prev => !prev);
@@ -372,20 +462,84 @@ const JsonFormatter: React.FC = () => {
     }
   }, [jsonInput, processNestedJson]);
 
+  React.useEffect(() => {
+    // 仅在有效的 searchQuery 或数据/配置变化后重置并等待点击“搜索”触发
+    setMatchedPaths([]);
+    setActiveIndex(0);
+  }, [pathSearchMode, matchStrategy, caseSensitive, formattedJson]);
+
+  React.useEffect(() => {
+    const activePath = matchedPaths[activeIndex];
+    if (!activePath) return;
+    const el = document.querySelector(`[data-path="${activePath}"]`) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [matchedPaths, activeIndex]);
+
   const renderResult = (): ReactNode => {
     if (error) {
       return <div style={styles.errorMessage}>{error}</div>;
     }
     
     if (formattedJson !== null) {
-      return <JsonViewer data={formattedJson as Record<string, unknown> | unknown[]} />;
+      return (
+        <JsonViewer 
+          data={formattedJson as Record<string, unknown> | unknown[]} 
+          searchQuery={searchQuery} 
+          searchMode={pathSearchMode ? 'path' : 'text'}
+          autoExpandOnSearch={autoExpand}
+          globalExpandSignal={globalExpandSignal}
+          filterMode={filterOnlyMatches}
+          matchStrategy={matchStrategy}
+          caseSensitive={caseSensitive}
+          activeMatchPath={matchedPaths[activeIndex]}
+          onRegisterMatch={(p) => setMatchedPaths(prev => prev.includes(p) ? prev : [...prev, p])}
+          matchesVersion={matchesVersion}
+          matchedPaths={matchedPaths}
+        />
+      );
     }
     
     return <div style={styles.placeholder}>格式化的 JSON 将在这里显示</div>;
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToTop = useCallback(() => {
+    try {
+      const se = document.scrollingElement || document.documentElement || document.body;
+      if (se) {
+        se.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } catch {}
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    try {
+      const se = document.scrollingElement || document.documentElement || document.body;
+      const h = Math.max(
+        se?.scrollHeight || 0,
+        document.documentElement?.scrollHeight || 0,
+        document.body?.scrollHeight || 0,
+        containerRef.current?.scrollHeight || 0
+      );
+      if (se) {
+        se.scrollTo({ top: h, left: 0, behavior: 'smooth' });
+      }
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: containerRef.current.scrollHeight, left: 0, behavior: 'smooth' });
+      }
+      window.scrollTo({ top: h, left: 0, behavior: 'smooth' });
+    } catch {}
+  }, []);
+
   return (
-    <div style={styles.container}>
+    <div style={styles.container} ref={containerRef}>
       {/* 顶部导航 */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
@@ -440,105 +594,278 @@ const JsonFormatter: React.FC = () => {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 border: '1px solid #e5e7eb'
               }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+              }}>
+                <input
+                  type="checkbox"
+                  id="processNestedJson"
+                  checked={processNestedJson}
+                  onChange={handleToggleNestedJson}
+                  style={{
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    marginRight: '0.75rem',
+                    accentColor: '#3b82f6'
+                  }}
+                />
+                <label htmlFor="processNestedJson" style={{
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  color: '#1e40af'
                 }}>
-                  <input
-                    type="checkbox"
-                    id="processNestedJson"
-                    checked={processNestedJson}
-                    onChange={handleToggleNestedJson}
-                    style={{
-                      width: '1.25rem',
-                      height: '1.25rem',
-                      marginRight: '0.75rem',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <label htmlFor="processNestedJson" style={{
-                    fontSize: '1rem',
+                  解析嵌套 JSON 字符串
+                </label>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '1rem'
+              }}>
+                <button
+                  onClick={handleClear}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.5rem 1.25rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    background: 'white',
+                    color: '#374151',
+                    fontSize: '0.875rem',
                     fontWeight: '500',
-                    color: '#1e40af'
-                  }}>
-                    解析嵌套 JSON 字符串
-                  </label>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem'
-                }}>
-                  <button
-                    onClick={handleClear}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0.5rem 1.25rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      background: 'white',
-                      color: '#374151',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <FiTrash2 style={{ color: '#ef4444', marginRight: '0.5rem' }} /> 清空
-                  </button>
-                  
-                  <button
-                    onClick={formatJson}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0.625rem 1.25rem',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      background: 'linear-gradient(to right, #3b82f6, #2563eb)',
-                      color: 'white',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    格式化 JSON
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 输出区域 */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <h2 style={styles.cardTitle}>
-                  <span>格式化结果</span>
-                  {wasDoubleQuoted && (
-                    <span style={styles.badge2}>
-                      检测到被引号包裹的JSON
-                    </span>
-                  )}
-                </h2>
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <FiTrash2 style={{ color: '#ef4444', marginRight: '0.5rem' }} /> 清空
+                </button>
                 
-                {formattedJson !== null && (
-                  <button
-                    onClick={handleCopyToClipboard}
-                    style={styles.copyButton}
-                    title="复制到剪贴板"
-                  >
-                    <FiCopy style={styles.copyIcon} /> {copied ? '已复制!' : '复制'}
-                  </button>
-                )}
-              </div>
-              
-              <div style={styles.resultContainer}>
-                {renderResult()}
+                <button
+                  onClick={formatJson}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.625rem 1.25rem',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                    color: 'white',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  格式化 JSON
+                </button>
               </div>
             </div>
           </div>
+
+          {/* 输出区域 */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <h2 style={styles.cardTitle}>
+                <span>格式化结果</span>
+                {wasDoubleQuoted && (
+                  <span style={styles.badge2}>
+                    检测到被引号包裹的JSON
+                  </span>
+                )}
+              </h2>
+              {/* 结果操作：搜索与展开控制 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input 
+                  type="text" 
+                  placeholder="搜索（键/值），或勾选按键路径搜索" 
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  style={{
+                    padding: '0.4rem 0.6rem',
+                    border: '1px solid #e5edff',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <button
+                  onClick={triggerSearch}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #3b82f6',
+                    background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                  title="搜索"
+                >搜索</button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={pathSearchMode} 
+                    onChange={(e) => setPathSearchMode(e.target.checked)} 
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  按键路径搜索
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={filterOnlyMatches} 
+                    onChange={(e) => setFilterOnlyMatches(e.target.checked)} 
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  只显示匹配节点
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={caseSensitive} 
+                    onChange={(e) => setCaseSensitive(e.target.checked)} 
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  区分大小写
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={autoExpand} 
+                    onChange={(e) => setAutoExpand(e.target.checked)} 
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  搜索时自动展开
+                </label>
+                <select
+                  value={matchStrategy}
+                  onChange={(e) => setMatchStrategy(e.target.value as 'contains'|'exact'|'regex')}
+                  style={{
+                    padding: '0.375rem 0.5rem',
+                    border: '1px solid #e5edff',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.85rem',
+                    background: 'white'
+                  }}
+                  title="匹配方式"
+                >
+                  <option value="contains">包含匹配</option>
+                  <option value="exact">精准匹配</option>
+                  <option value="regex">正则匹配</option>
+                </select>
+                <button
+                  onClick={() => setGlobalExpandSignal(prev => ({ mode: 'expand_all', tick: prev.tick + 1 }))}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                  title="全部展开"
+                >全部展开</button>
+                <button
+                  onClick={() => setGlobalExpandSignal(prev => ({ mode: 'collapse_all', tick: prev.tick + 1 }))}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                  title="全部折叠"
+                >全部折叠</button>
+                <span style={{ fontSize: '0.85rem', color: '#374151' }}>匹配 {matchedPaths.length} 项</span>
+                {/* 导航按钮移至悬浮条，保留计数 */}
+              </div>
+              
+              {formattedJson !== null && (
+                <button
+                  onClick={handleCopyToClipboard}
+                  style={styles.copyButton}
+                  title="复制到剪贴板"
+                >
+                  <FiCopy style={styles.copyIcon} /> {copied ? '已复制!' : '复制'}
+                </button>
+              )}
+            </div>
+            
+            <div style={styles.resultContainer}>
+              {renderResult()}
+            </div>
+          </div>
+          </div>
+          {/* 悬浮导航条：始终在屏幕上 */}
+          {matchedPaths.length > 0 && (
+            <div style={{
+              position: 'fixed',
+              right: '16px',
+              bottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #e5edff',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              borderRadius: '0.5rem',
+              padding: '0.5rem 0.75rem',
+              zIndex: 9999
+            }}>
+              <span style={{ fontSize: '0.85rem', color: '#374151' }}>{activeIndex + 1} / {matchedPaths.length}</span>
+              <button
+                onClick={() => setActiveIndex(prev => matchedPaths.length ? (prev - 1 + matchedPaths.length) % matchedPaths.length : 0)}
+                style={{
+                  padding: '0.375rem 0.5rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                  background: 'white',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+                title="上一个"
+              >上一个</button>
+              <button
+                onClick={scrollToTop}
+                style={{
+                  padding: '0.375rem 0.5rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                  background: 'white',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+                title="回顶部"
+              >回顶部</button>
+              <button
+                onClick={scrollToBottom}
+                style={{
+                  padding: '0.375rem 0.5rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                  background: 'white',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+                title="去底部"
+              >去底部</button>
+              <button
+                onClick={() => setActiveIndex(prev => matchedPaths.length ? (prev + 1) % matchedPaths.length : 0)}
+                style={{
+                  padding: '0.375rem 0.5rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                  background: 'white',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+                title="下一个"
+              >下一个</button>
+            </div>
+          )}
         </div>
       </main>
 
