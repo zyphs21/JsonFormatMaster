@@ -108,7 +108,7 @@ type JsonNodeProps = {
   matchedPaths?: string[];
 };
 
-const JsonNode: React.FC<JsonNodeProps> = ({
+const JsonNodeComponent: React.FC<JsonNodeProps> = ({
   name,
   value,
   isLast,
@@ -549,12 +549,16 @@ const JsonNode: React.FC<JsonNodeProps> = ({
 
   // 全局展开/折叠：仅作用于当前“显示中的”子节点（受过滤影响）
   useEffect(() => {
-    if (!globalExpandSignal || (typeof value !== 'object' || value === null)) return;
-    const isArr = Array.isArray(value);
-    const arr = isArr ? (value as unknown[]) : undefined;
-    const obj = !isArr ? (value as Record<string, unknown>) : undefined;
+    if (!globalExpandSignal || globalExpandSignal.mode === 'none') return;
+    if (typeof value !== 'object' || value === null) return;
+    
+    // 使用 requestAnimationFrame 批量处理状态更新，避免卡顿
+    const rafId = requestAnimationFrame(() => {
+      const isArr = Array.isArray(value);
+      const arr = isArr ? (value as unknown[]) : undefined;
+      const obj = !isArr ? (value as Record<string, unknown>) : undefined;
 
-    const getDisplayedKeys = (): string[] => {
+      const getDisplayedKeys = (): string[] => {
       if (isArr) {
         const keys: string[] = [];
         for (let i = 0; i < (arr as unknown[]).length; i++) {
@@ -601,22 +605,25 @@ const JsonNode: React.FC<JsonNodeProps> = ({
       }
     };
 
-    const displayedKeys = getDisplayedKeys();
-    if (globalExpandSignal.mode === 'expand_all') {
-      setChildExpanded(prev => {
-        const next: Record<string, boolean> = { ...prev };
-        for (const k of displayedKeys) next[k] = true;
-        return next;
-      });
-    } else if (globalExpandSignal.mode === 'collapse_all') {
-      setChildExpanded(prev => {
-        const next: Record<string, boolean> = { ...prev };
-        for (const k of displayedKeys) next[k] = false;
-        return next;
-      });
-    }
-    // 仅在 tick 改变或过滤相关变化时触发
-  }, [globalExpandSignal, filterMode, rawQuery, matchedPaths, value, path, searchMode]);
+      const displayedKeys = getDisplayedKeys();
+      if (globalExpandSignal.mode === 'expand_all') {
+        setChildExpanded(prev => {
+          const next: Record<string, boolean> = { ...prev };
+          for (const k of displayedKeys) next[k] = true;
+          return next;
+        });
+      } else if (globalExpandSignal.mode === 'collapse_all') {
+        setChildExpanded(prev => {
+          const next: Record<string, boolean> = { ...prev };
+          for (const k of displayedKeys) next[k] = false;
+          return next;
+        });
+      }
+    });
+    
+    // Cleanup: 取消未完成的动画帧
+    return () => cancelAnimationFrame(rafId);
+  }, [globalExpandSignal?.tick, globalExpandSignal?.mode]);
   
   if (filterMode) {
     if (searchMode === 'path') {
@@ -687,6 +694,23 @@ const JsonNode: React.FC<JsonNodeProps> = ({
     </div>
   );
 };
+
+// 使用 React.memo 优化性能，避免不必要的重新渲染
+const JsonNode = React.memo(JsonNodeComponent, (prevProps, nextProps) => {
+  // 自定义比较函数：只在关键 props 改变时才重新渲染
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.expanded === nextProps.expanded &&
+    prevProps.isLast === nextProps.isLast &&
+    prevProps.path === nextProps.path &&
+    prevProps.searchQuery === nextProps.searchQuery &&
+    prevProps.activeMatchPath === nextProps.activeMatchPath &&
+    prevProps.globalExpandSignal?.tick === nextProps.globalExpandSignal?.tick &&
+    prevProps.filterMode === nextProps.filterMode &&
+    prevProps.matchStrategy === nextProps.matchStrategy &&
+    prevProps.caseSensitive === nextProps.caseSensitive
+  );
+});
 
 const JsonViewer: React.FC<JsonViewerProps> = ({
   data,

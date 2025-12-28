@@ -278,6 +278,7 @@ const JsonFormatter: React.FC = () => {
   const [matchedPaths, setMatchedPaths] = useState<string[]>([]);
   const [matchesVersion, setMatchesVersion] = useState<number>(0);
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [isExpanding, setIsExpanding] = useState<boolean>(false);
 
   const formatJson = useCallback(() => {
     if (!jsonInput.trim()) {
@@ -461,6 +462,19 @@ const JsonFormatter: React.FC = () => {
       }
     }
   }, [jsonInput, processNestedJson]);
+
+  // 处理全部展开/折叠，带防抖和视觉反馈
+  const handleExpandCollapse = useCallback((mode: 'expand_all' | 'collapse_all') => {
+    if (isExpanding) return; // 防止快速连续点击
+    
+    setIsExpanding(true);
+    setGlobalExpandSignal(prev => ({ mode, tick: prev.tick + 1 }));
+    
+    // 延迟重置状态，给用户视觉反馈
+    setTimeout(() => {
+      setIsExpanding(false);
+    }, 300);
+  }, [isExpanding]);
 
   React.useEffect(() => {
     // 仅在有效的 searchQuery 或数据/配置变化后重置并等待点击“搜索”触发
@@ -757,28 +771,34 @@ const JsonFormatter: React.FC = () => {
                   <option value="regex">正则匹配</option>
                 </select>
                 <button
-                  onClick={() => setGlobalExpandSignal(prev => ({ mode: 'expand_all', tick: prev.tick + 1 }))}
+                  onClick={() => handleExpandCollapse('expand_all')}
+                  disabled={isExpanding}
                   style={{
                     padding: '0.375rem 0.75rem',
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
-                    background: 'white',
-                    color: '#374151',
+                    background: isExpanding ? '#f3f4f6' : 'white',
+                    color: isExpanding ? '#9ca3af' : '#374151',
                     fontSize: '0.85rem',
-                    cursor: 'pointer'
+                    cursor: isExpanding ? 'not-allowed' : 'pointer',
+                    opacity: isExpanding ? 0.6 : 1,
+                    transition: 'all 0.2s'
                   }}
                   title="全部展开"
                 >全部展开</button>
                 <button
-                  onClick={() => setGlobalExpandSignal(prev => ({ mode: 'collapse_all', tick: prev.tick + 1 }))}
+                  onClick={() => handleExpandCollapse('collapse_all')}
+                  disabled={isExpanding}
                   style={{
                     padding: '0.375rem 0.75rem',
                     borderRadius: '0.375rem',
                     border: '1px solid #d1d5db',
-                    background: 'white',
-                    color: '#374151',
+                    background: isExpanding ? '#f3f4f6' : 'white',
+                    color: isExpanding ? '#9ca3af' : '#374151',
                     fontSize: '0.85rem',
-                    cursor: 'pointer'
+                    cursor: isExpanding ? 'not-allowed' : 'pointer',
+                    opacity: isExpanding ? 0.6 : 1,
+                    transition: 'all 0.2s'
                   }}
                   title="全部折叠"
                 >全部折叠</button>
